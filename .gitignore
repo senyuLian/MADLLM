@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+
+# 忽略 AR_MALLM 下的产物/数据
+AR_MALLM/data/
+AR_MALLM/res/
+AR_MALLM/figs/
+
+# 忽略下载的预训练模型
+downloaded_plms/
+
+*.pkl
+AR_MALLM/artifacts/
