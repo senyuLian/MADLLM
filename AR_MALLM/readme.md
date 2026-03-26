@@ -74,10 +74,10 @@ python run_plm.py --adapt --grad-accum-steps 32 --plm-type llama --plm-size base
 在测试集或未见规模（如 3 智能体）环境下评估：
 ```bash
 # 评估
-python plm_special/test.py
+python plm_special/evaluate.py
 
 # 测试
-python plm_special/evaluate.py
+python plm_special/test.py
 ```
 
 ---
