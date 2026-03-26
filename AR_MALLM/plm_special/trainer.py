@@ -40,6 +40,7 @@ class Trainer:
             train_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), .25)
             if ((step + 1) % self.grad_accum_steps == 0) or (step + 1 == dataset_size):
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), .25)
                 self.optimizer.step()
                 self.optimizer.zero_grad(set_to_none=True)
                 if self.lr_scheduler is not None:
