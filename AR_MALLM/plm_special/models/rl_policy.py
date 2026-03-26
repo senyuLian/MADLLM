@@ -273,18 +273,32 @@ class OfflineRLPolicy(nn.Module):
 
         return bitrate
     
-    def clear_dq(self):
-        self.agent_ids_dq.clear()
-        self.pre_rs_dq.clear()
-        self.states_dq.clear()
-        self.actions_dq.clear()
-        self.returns_dq.clear()
+    # def clear_dq(self):
+    #     self.agent_ids_dq.clear()
+    #     self.pre_rs_dq.clear()
+    #     self.states_dq.clear()
+    #     self.actions_dq.clear()
+    #     self.returns_dq.clear()
 
-        self.agent_ids_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
-        self.pre_rs_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
-        self.states_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
-        self.actions_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
-        self.returns_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+    #     self.agent_ids_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+    #     self.pre_rs_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+    #     self.states_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+    #     self.actions_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+    #     self.returns_dq.append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+
+    def clear_dq(self):
+        for i in range(self.num_agents):
+            self.agent_ids_dq_list[i].clear()
+            self.pre_rs_dq_list[i].clear()
+            self.states_dq_list[i].clear()
+            self.actions_dq_list[i].clear()
+            self.returns_dq_list[i].clear()
+
+            self.agent_ids_dq_list[i].append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+            self.pre_rs_dq_list[i].append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+            self.states_dq_list[i].append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+            self.actions_dq_list[i].append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
+            self.returns_dq_list[i].append(torch.zeros((1, 0, self.plm_embed_size), device=self.device))
 
     def _sample(self, logits):
         pi = F.softmax(logits.detach(), 0).cpu().numpy() ############

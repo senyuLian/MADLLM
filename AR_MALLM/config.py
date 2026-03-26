@@ -1,12 +1,30 @@
 import os
-
-
 class Config:
     _base_dir = '' if 'AR_MALLM' in os.getcwd() else 'AR_MALLM/'
 
     artifacts_dir = _base_dir + 'artifacts/'
     results_dir = artifacts_dir + 'results/'
     exp_pools_dir = artifacts_dir + 'exp_pools/'
+    # 默认的经验池路径
+    default_exp_pool_path = exp_pools_dir + 'AR_exp_pool_coma_90_0std_dta_2000.pkl'
+
+    # --- 训练超参数 (Training Hyper-parameters) ---
+    lr = 1e-4
+    weight_decay = 1e-4
+    warmup_steps = 2000
+    num_epochs = 80
+    grad_accum_steps = 32
+    seed = 100003
+    eval_per_epoch = 1
+    
+    # --- 强化学习配置 (RL Config) ---
+    gamma = 1.0           # 折扣因子
+    scale = 1000          # 奖励缩放
+    context_window = 20   # 即原代码中的 'w'
+    state_feature_dim = 256
+    target_return_scale = 1.0
+    penalty = 1.0         # 环境惩罚项系数
+    sample_step = None       # 经验采样步长###
 
     # plm special
     plm_types = ['gpt2', 'llama', 'llava', 't5-lm', 'opt', 'mistral']

@@ -47,6 +47,7 @@ class Runner:
                     target_return -= reward
                     episodes_return += reward
                     episodes_len += 1
+                    print(f"[Reward] t_ep: {self.t_ep-1}, Raw Reward: {self.env.get_current_reward(self.t_ep-1)}, Processed Reward: {reward}, Target Return: {target_return}")
             #############
 
             if (self.env.sys_time - update_time) in self.env.stage_time or (self.env.sys_time in self.env.stage_time): #有新用户到达的时刻
@@ -66,6 +67,7 @@ class Runner:
                     user_action = model.sample(user_id, pre_r, user_obs, target_return, timesteps[user_id])
                     timesteps[user_id] += 1
                     actions[0][user_id] = user_action
+                    print(f"[Action] User {user_id}: Action {user_action}, Pre Reward {pre_r}, Timestep {timesteps[user_id]-1}, Target Return {target_return}")
                 ##########################
 
                 for user_id in self.env.newest_arrive_user: #处理新到达的用户
@@ -98,6 +100,7 @@ class Runner:
                     user_action = model.sample(user_id, pre_r, user_obs, target_return, timesteps[user_id])
                     timesteps[user_id] += 1
                     actions[0][user_id] = user_action
+                    print(f"[Action] User {user_id}: Action {user_action}, Pre Reward {pre_r}, Timestep {timesteps[user_id]-1}, Target Return {target_return}")
                 ##########################
 
                 for user in self.env.Users:

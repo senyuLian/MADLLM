@@ -3,6 +3,7 @@ This file is rewritten based on openprompt.plms.__init__.py with a small modific
 on model class initialization.
 We write this file just to avoid direct coding on openprompt source codes.
 """
+#清华开源框架openprompt 进行填空预测promptLearning
 
 import math
 from typing import List, Optional

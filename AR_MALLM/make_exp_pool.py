@@ -16,7 +16,7 @@ pool = ExperiencePool()
 for file_path in json_files:
     with open(file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    print(f'📥📥 读取 {file_path}，共 {len(data)} 条经验')
+    print(f'读取 {file_path}，共 {len(data)} 条经验')
     
     for step_dict in data:
         
@@ -34,4 +34,4 @@ out_path = 'AR_exp_pool_coma_90_0.5std_dta_2000.pkl'
 with open(out_path, 'wb') as f:
     pickle.dump(pool, f)
 
-print(f'✅ 合并完成，共 {len(pool)} 条经验，已保存到 {out_path}')
+print(f'共 {len(pool)} 条经验，已保存到 {out_path}')

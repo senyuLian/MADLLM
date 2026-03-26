@@ -229,8 +229,8 @@ def run(args):
         train_exp_pool_info + f'_ss_{args.sample_step}',
         f'rank_{args.rank}_w_{args.w}_gamma_{args.gamma}_sfd_{args.state_feature_dim}'
         f'_lr_{args.lr}_wd_{args.weight_decay}_warm_{args.warmup_steps}_epochs_{args.num_epochs}_seed_{args.seed}'
-        f'_return_scale_{args.target_return_scale}'
-        f'_penalty_{args.penalty}'
+        f'_return_scale_{args.target_return_scale}_0.5p'
+        # f'_penalty_{args.penalty}'
     )  #
     checkpoint_dir = os.path.join(models_dir, f'early_stop_{args.which_layer}_checkpoint')
     best_model_dir = os.path.join(models_dir, f'early_stop_{args.which_layer}_best_model')
@@ -261,44 +261,41 @@ def run(args):
 
 if __name__ == '__main__':
     parser = ArgumentParser(description=__doc__, formatter_class=ArgumentDefaultsHelpFormatter)
-    # training dataset settings
-    parser.add_argument('--exp-pool-path', help='the path storing the experience pool file for training', default='artifacts/exp_pools/AR_exp_pool_coma_90_0std_dta_2000.pkl')
-    parser.add_argument('--sample-step', type=int, help='the steps for sampling experiences')
-    # plm settings
+
+    # 1. 训练数据集设置 - 使用 cfg.default_exp_pool_path
+    parser.add_argument('--exp-pool-path', help='经验池路径', default=cfg.default_exp_pool_path)
+    parser.add_argument('--sample-step', type=int, help='采样步长', default=cfg.sample_step)
+
+    # 2. PLM 设置
     parser.add_argument('--plm-type', type=str, default='gpt2')
     parser.add_argument('--plm-size', type=str, default='base')
-    parser.add_argument('--rank', type=int, help='rank of low-rank matrices. if set to -1, low-rank matrices will not be enabled', default=-1)
-    # state encoder settings
-    parser.add_argument('--state-feature-dim', type=int, help='feature dim of the state encoder', default=256)
-    # rl policy related settings
-    parser.add_argument('--w', type=int, help='context window for learning return distribution', default=20)
-    parser.add_argument('--gamma', type=float, help='discounted factor of reward', default=1.)
-    parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--weight-decay', type=float, default=1e-4)
-    parser.add_argument('--warmup-steps', type=int, default=2000)
-    parser.add_argument('--num-epochs', type=int, default=80)
-    parser.add_argument('--eval-per-epoch', type=int, help='evaluation per epoch', default=1)
+    parser.add_argument('--rank', type=int, help='LoRA rank, -1 为全量微调', default=-1)
+
+    # 3. 状态编码器设置 - 使用 cfg.state_feature_dim
+    parser.add_argument('--state-feature-dim', type=int, default=cfg.state_feature_dim)
+
+    # 4. RL 策略相关设置 - 使用 cfg 中的对应项
+    parser.add_argument('--w', type=int, help='上下文窗口', default=cfg.context_window)
+    parser.add_argument('--gamma', type=float, default=cfg.gamma)
+    parser.add_argument('--target-return-scale', type=float, default=cfg.target_return_scale)
+    parser.add_argument('--penalty', type=float, default=cfg.penalty)
+    
+    # 5. 训练超参数 - 使用 cfg 中的对应项
+    parser.add_argument('--lr', type=float, default=cfg.lr)
+    parser.add_argument('--weight-decay', type=float, default=cfg.weight_decay)
+    parser.add_argument('--warmup-steps', type=int, default=cfg.warmup_steps)
+    parser.add_argument('--num-epochs', type=int, default=cfg.num_epochs)
+    parser.add_argument('--eval-per-epoch', type=int, default=cfg.eval_per_epoch)
+    parser.add_argument('--grad-accum-steps', type=int, default=cfg.grad_accum_steps)
+    parser.add_argument('--seed', type=int, default=cfg.seed)
+    parser.add_argument('--scale', type=int, default=cfg.scale)
+
     parser.add_argument('--save-checkpoint-per-epoch', type=int, help='saving checkpoint per iteration')
-    parser.add_argument(
-        '--target-return-scale',
-        type=float,
-        help='target return, which specifies the expected performance for the model to achieve',
-        default=1,
-    )  ####
-    parser.add_argument(
-        '--penalty',
-        type=float,
-        default=1,
-        help='penalty of std for sum',
-    )
     #parser.add_argument('--target-return-scale', type=float, help='target return, which specifies the expected performance for the model to achieve', default=1) ####
     parser.add_argument('--which-layer', type=int, help='for early stopping (not used in our experiments): specify which layer to stop (layer index starts from 0)', default=-1)
     # other settings
     parser.add_argument('--adapt', action="store_true", help='adapt model')
     parser.add_argument('--test', action="store_true", help='test model')
-    parser.add_argument('--grad-accum-steps', dest='grad_accum_steps', type=int, default=32)
-    parser.add_argument('--seed', help='random seed', type=int, default=100003)
-    parser.add_argument('--scale', help='scale reward/return', type=int, default=1000)
     parser.add_argument('--model-dir', help='model weight dir for testing')
     parser.add_argument('--device', action='store', dest='device', help='device (cuda or cpu) to run experiment')
     parser.add_argument('--device-out', action='store', dest='device_out', help='device (cuda or cpu) to place the split of model near the output')

@@ -18,9 +18,14 @@ class test_on_env:
         self.env = Env(self.config)
 
     def evaluate_on_AR_Env(self, args, model, target_return, process_reward_fn=None):
+        
         if process_reward_fn is None:
             process_reward_fn = lambda x: x
         self.reset()
+        ##########################################################
+        model.clear_dq()
+        target_return = target_return / args.scale
+        ##########################################################
 
         with torch.no_grad():
             timesteps = [0] * self.env.max_user_num

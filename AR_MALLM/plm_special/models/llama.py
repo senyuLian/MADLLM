@@ -12,7 +12,7 @@ from transformers.utils import add_start_docstrings, logging
 
 logger = logging.get_logger(__name__)
 
-
+#早停机制、掩码机制、自定义了Llama类的核心逻辑（LlamaRMSNorm归一化等）
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
 def _make_causal_mask(
     input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device, past_key_values_length: int = 0
