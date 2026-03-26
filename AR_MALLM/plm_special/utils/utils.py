@@ -36,7 +36,7 @@ def process_batch(batch, device='cpu'):
     timesteps = torch.as_tensor(timesteps, dtype=torch.int32, device=device).unsqueeze(0)
     
 
-    return agent_ids, agent_ids, states, actions, returns, timesteps, labels
+    return agent_ids, pre_rs, states, actions, returns, timesteps, labels
 
 # def process_batch(batch, device='cpu'):
 
