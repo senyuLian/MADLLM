@@ -398,7 +398,7 @@ python plm_special/test.py
 | **MADLLM (Llama-7B + LoRA)** | **4075.15** | **165.25** |
 | COMA (Baseline) | 4904.83 | 161.18 |
 
-MADLLM 在 QoS 总量上较 COMA 提升 **31.2%**。
+
 
 ### 跨场景泛化
 
