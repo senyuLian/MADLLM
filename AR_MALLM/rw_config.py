@@ -65,7 +65,7 @@ def init_config_file():
                                'user_band_trace_group_id': 9,
                                'BS_alg': 'new_heur_inter',
                                'user_alg': 'rl_directed',  # rl_directed是使用COMA QoE-based是对比算法
-                               'penalty': 1,
+                               'penalty': 1.0,
                                'max_band': 100000,
                                'min_band': 5000,
                                'init_actions': [1, 1, 1, 1, 1],

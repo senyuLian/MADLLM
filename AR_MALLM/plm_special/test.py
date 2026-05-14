@@ -24,7 +24,7 @@ class test_on_env:
         self.reset()
         ##########################################################
         model.clear_dq()
-        target_return = target_return / args.scale
+        # target_return = target_return / args.scale
         ##########################################################
 
         # [修改点]: 开启 eval 模式

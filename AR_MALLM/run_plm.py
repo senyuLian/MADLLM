@@ -229,12 +229,28 @@ def run(args):
         train_exp_pool_info + f'_ss_{args.sample_step}',
         f'rank_{args.rank}_w_{args.w}_gamma_{args.gamma}_sfd_{args.state_feature_dim}'
         f'_lr_{args.lr}_wd_{args.weight_decay}_warm_{args.warmup_steps}_epochs_{args.num_epochs}_seed_{args.seed}'
-        f'_return_scale_{args.target_return_scale}_0.5p'
-        # f'_penalty_{args.penalty}'
+        f'_return_scale_{args.target_return_scale}'
+        f'_penalty_{args.penalty}'
     )  #
     checkpoint_dir = os.path.join(models_dir, f'early_stop_{args.which_layer}_checkpoint')
     best_model_dir = os.path.join(models_dir, f'early_stop_{args.which_layer}_best_model')
 
+    def select_model_dir_for_testing(model_dir, checkpoint_dir, best_model_dir):
+        if model_dir is not None:
+            return model_dir
+        if os.path.exists(best_model_dir) and os.listdir(best_model_dir):
+            return best_model_dir
+        if os.path.exists(checkpoint_dir):
+            checkpoints = [d for d in os.listdir(checkpoint_dir) if os.path.isdir(os.path.join(checkpoint_dir, d))]
+            numeric_ckpts = [d for d in checkpoints if d.isdigit()]
+            if numeric_ckpts:
+                numeric_ckpts = sorted(numeric_ckpts, key=int)
+                latest_ckpt = os.path.join(checkpoint_dir, numeric_ckpts[-1])
+                print(f"Warning: best model directory is empty, using latest checkpoint: {latest_ckpt}")
+                return latest_ckpt
+        raise AssertionError(
+            f"No valid model directory found. Please run --adapt first or pass --model-dir to an existing checkpoint folder. ``best_model_dir`` is empty: {best_model_dir}"
+        )
 
     # 5. start training/testing
     def process_reward(reward, 
@@ -255,7 +271,7 @@ def run(args):
         sys.stdout = ConsoleLogger(sys.__stdout__, console_log)
         adapt(args, rl_policy, exp_dataset, exp_dataset_info, checkpoint_dir, best_model_dir, process_reward)
     if args.test:
-        model_dir = args.model_dir if args.model_dir is not None else best_model_dir
+        model_dir = select_model_dir_for_testing(args.model_dir, checkpoint_dir, best_model_dir)
         assert os.path.exists(model_dir), f'Model weight dir {model_dir} does not exist.'
         test(args, rl_policy, exp_dataset_info, model_dir, process_reward)
 

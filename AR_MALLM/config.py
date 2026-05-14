@@ -22,8 +22,8 @@ class Config:
     scale = 1000          # 奖励缩放
     context_window = 20   # 即原代码中的 'w'
     state_feature_dim = 256
-    target_return_scale = 1.0
-    penalty = 1.0         # 环境惩罚项系数
+    target_return_scale = 10000.0
+    penalty = 0       # 环境惩罚项系数
     sample_step = None       # 经验采样步长###
 
     # plm special
