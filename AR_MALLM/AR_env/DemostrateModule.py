@@ -211,8 +211,8 @@ class DemostrateModule:
         for i in range(len(real_stage_time) - 3):
             stages.append([real_stage_time[i + 1], real_stage_time[i + 2]])
 
-        stages_index = [[0, 2], [0, 3], [0, 4], [0, 5],
-                        [1, 5], [2, 5], [3, 5]]
+        stages_index = [[0, end] for end in range(2, max_user_num + 1)] + \
+                   [[start, max_user_num] for start in range(1, max_user_num - 1)]
 
         user_sum4stages = np.zeros([len(stages), max_user_num])
         for i in range(max_user_num):

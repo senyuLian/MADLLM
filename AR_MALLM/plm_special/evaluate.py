@@ -68,6 +68,8 @@ class Runner:
                         # 为活跃用户生成动作
                         user_obs = obs[user_id].float().unsqueeze(0).unsqueeze(0) #使用系统时间，不需要自己传时间参数
                         pre_r = self.env.get_tp_pre_add_r(self.t_ep - 1, user_id) if self.t_ep > 0 else 0
+                        if getattr(args, 'ablate_pre_r', False):
+                            pre_r = args.pre_r_constant
                         user_action = model.sample(user_id, pre_r, user_obs, target_return, timesteps[user_id])
                         timesteps[user_id] += 1
                         actions[0][user_id] = user_action
@@ -101,6 +103,8 @@ class Runner:
                         # 为活跃用户生成动作
                         user_obs = obs[user_id].float().unsqueeze(0).unsqueeze(0) #使用系统时间，不需要自己传时间参数
                         pre_r = self.env.get_tp_pre_add_r(self.t_ep - 1, user_id) if self.t_ep > 0 else 0
+                        if getattr(args, 'ablate_pre_r', False):
+                            pre_r = args.pre_r_constant
                         user_action = model.sample(user_id, pre_r, user_obs, target_return, timesteps[user_id])
                         timesteps[user_id] += 1
                         actions[0][user_id] = user_action
@@ -162,8 +166,8 @@ class Runner:
             for i in range(len(real_stage_time) - 3):
                 stages.append([real_stage_time[i + 1], real_stage_time[i + 2]])
 
-            stages_index = [[0, 2], [0, 3], [0, 4], [0, 5],
-                            [1, 5], [2, 5], [3, 5]]
+            stages_index = [[0, end] for end in range(2, self.env.max_user_num + 1)] + \
+                           [[start, self.env.max_user_num] for start in range(1, self.env.max_user_num - 1)]
 
             user_sum4stages = np.zeros([len(stages), self.env.max_user_num])
             for i in range(self.env.max_user_num):

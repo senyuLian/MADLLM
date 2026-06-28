@@ -24,6 +24,7 @@ class OfflineRLPolicy(nn.Module):
             device_out=None,
             residual=False, 
             which_layer=-1,  # for early stopping: specify which layer to stop
+            use_pre_r=True,
             **kwargs
     ):
         super().__init__()
@@ -39,6 +40,7 @@ class OfflineRLPolicy(nn.Module):
 
         self.plm = plm
         self.plm_embed_size = plm_embed_size
+        self.use_pre_r = use_pre_r
 
         # =========== multimodal encoder (start) ===========
         self.state_encoder = state_encoder  # Now this is UserObsEncoder
@@ -47,7 +49,7 @@ class OfflineRLPolicy(nn.Module):
         # Initialize embeddings for different observation features
         self.embed_timestep = nn.Embedding(max_ep_len + 1, plm_embed_size).to(device)
         self.embed_agent_id = nn.Linear(1, plm_embed_size).to(device)
-        self.embed_pre_r = nn.Linear(1, plm_embed_size).to(device)
+        self.embed_pre_r = nn.Linear(1, plm_embed_size).to(device) if use_pre_r else None
         self.embed_return = nn.Linear(1, plm_embed_size).to(device)
         self.embed_action = nn.Linear(1, plm_embed_size).to(device)
 
@@ -80,12 +82,26 @@ class OfflineRLPolicy(nn.Module):
         self.residual = residual
         self.which_layer = which_layer
 
-        self.modules_except_plm = nn.ModuleList([
-            self.embed_agent_id, self.embed_pre_r, self.state_encoder, self.embed_timestep, self.embed_return, self.embed_action, 
-            self.embed_ln, self.embed_delay, self.embed_throughput, self.embed_loss,
-            self.embed_jitter, self.embed_buffer, self.embed_playtime, self.embed_action_feat,
-            self.embed_band1, self.embed_band2, self.action_head
-        ])
+        module_list = [
+            self.embed_agent_id,
+            self.embed_pre_r,
+            self.state_encoder,
+            self.embed_timestep,
+            self.embed_return,
+            self.embed_action,
+            self.embed_ln,
+            self.embed_delay,
+            self.embed_throughput,
+            self.embed_loss,
+            self.embed_jitter,
+            self.embed_buffer,
+            self.embed_playtime,
+            self.embed_action_feat,
+            self.embed_band1,
+            self.embed_band2,
+            self.action_head,
+        ]
+        self.modules_except_plm = nn.ModuleList([m for m in module_list if m is not None])
 
     def forward(self, agent_ids, pre_rs, states, actions, returns, timesteps, attention_mask=None):
 
@@ -94,13 +110,17 @@ class OfflineRLPolicy(nn.Module):
 
         # Step 1: process actions, returns and timesteps
         agent_ids = agent_ids.to(self.device)
-        pre_rs = pre_rs.to(self.device)
+        if self.use_pre_r:
+            pre_rs = pre_rs.to(self.device)
         actions = actions.to(self.device)
         returns = returns.to(self.device)
         timesteps = timesteps.to(self.device)
 
         agent_id_embeddings = self.embed_agent_id(agent_ids)
-        pre_r_embeddings = self.embed_pre_r(pre_rs)
+        if self.use_pre_r:
+            pre_r_embeddings = self.embed_pre_r(pre_rs)
+        else:
+            pre_r_embeddings = torch.zeros_like(agent_id_embeddings)
         action_embeddings = self.embed_action(actions)
         returns_embeddings = self.embed_return(returns)
         time_embeddings = self.embed_timestep(timesteps).squeeze()
@@ -130,13 +150,17 @@ class OfflineRLPolicy(nn.Module):
 
         # Step 3: stack returns, state features, actions embeddings
         stacked_inputs = []
-        action_embed_positions = np.zeros(returns_embeddings.shape[1]) #序列长度
+        num_feature_blocks = 2 + int(self.use_pre_r) + 9 + 1
+        action_embed_positions = np.zeros(returns_embeddings.shape[1], dtype=np.int64) #序列长度
         
         for i in range(returns_embeddings.shape[1]):
-            stacked_input = torch.cat((
+            feature_blocks = [
                 returns_embeddings[0, i:i+1],
                 agent_id_embeddings[0, i:i+1],
-                pre_r_embeddings[0, i:i+1],
+            ]
+            if self.use_pre_r:
+                feature_blocks.append(pre_r_embeddings[0, i:i+1])
+            feature_blocks.extend([
                 delay_emb[0, i:i+1],
                 throughput_emb[0, i:i+1],
                 loss_emb[0, i:i+1],
@@ -147,9 +171,10 @@ class OfflineRLPolicy(nn.Module):
                 band1_emb[0, i:i+1],
                 band2_emb[0, i:i+1],
                 action_embeddings[0, i:i+1]
-            ), dim=0)
+            ])
+            stacked_input = torch.cat(tuple(feature_blocks), dim=0)
             stacked_inputs.append(stacked_input)
-            action_embed_positions[i] = (i + 1) * (4 + 9)  # 1 return + 9 state features
+            action_embed_positions[i] = (i + 1) * num_feature_blocks
         
         stacked_inputs = torch.cat(stacked_inputs, dim=0).unsqueeze(0) # 合并多个时间步
         stacked_inputs = stacked_inputs[:, -self.plm_embed_size:, :] # 截断到plm_embed_size此处
@@ -194,10 +219,13 @@ class OfflineRLPolicy(nn.Module):
         for i in range(len(states_dq)):
             prev_return_embeddings = returns_dq[i]
             prev_agent_id_embeddings = agent_ids_dq[i]
-            prev_pre_r_embeddings = pre_rs_dq[i]
             prev_state_embeddings = states_dq[i]
             prev_action_embeddings = actions_dq[i]
-            prev_stacked_inputs.append(torch.cat((prev_return_embeddings, prev_agent_id_embeddings, prev_pre_r_embeddings, prev_state_embeddings, prev_action_embeddings), dim=1))
+            prev_feature_blocks = [prev_return_embeddings, prev_agent_id_embeddings]
+            if self.use_pre_r:
+                prev_feature_blocks.append(pre_rs_dq[i])
+            prev_feature_blocks.extend([prev_state_embeddings, prev_action_embeddings])
+            prev_stacked_inputs.append(torch.cat(tuple(prev_feature_blocks), dim=1))
         prev_stacked_inputs = torch.cat(prev_stacked_inputs, dim=1)
 
         # Step 2: process target return and timesteps
@@ -215,8 +243,11 @@ class OfflineRLPolicy(nn.Module):
             # Embed each feature separately and add time embeddings
         agent_id_tensor = torch.as_tensor([agent_id], dtype=torch.float32, device=self.device).reshape(1, 1, 1)
         agent_id_embeddings = self.embed_agent_id(agent_id_tensor) + time_embeddings
-        pre_r_tensor = torch.as_tensor([pre_r], dtype=torch.float32, device=self.device).reshape(1, 1, 1)
-        pre_r_embeddings = self.embed_pre_r(pre_r_tensor) + time_embeddings
+        if self.use_pre_r:
+            pre_r_tensor = torch.as_tensor([pre_r], dtype=torch.float32, device=self.device).reshape(1, 1, 1)
+            pre_r_embeddings = self.embed_pre_r(pre_r_tensor) + time_embeddings
+        else:
+            pre_r_embeddings = torch.zeros_like(agent_id_embeddings)
 
         delay_emb = self.embed_delay(state_features[0]) + time_embeddings
         throughput_emb = self.embed_throughput(state_features[1]) + time_embeddings
@@ -235,7 +266,11 @@ class OfflineRLPolicy(nn.Module):
         ], dim=1)
 
         # Step 4: stack return, state and previous embeddings
-        stacked_inputs = torch.cat((return_embeddings, agent_id_embeddings, pre_r_embeddings, state_embeddings), dim=1)
+        current_feature_blocks = [return_embeddings, agent_id_embeddings]
+        if self.use_pre_r:
+            current_feature_blocks.append(pre_r_embeddings)
+        current_feature_blocks.append(state_embeddings)
+        stacked_inputs = torch.cat(tuple(current_feature_blocks), dim=1)
         stacked_inputs = torch.cat((prev_stacked_inputs, stacked_inputs), dim=1)
         stacked_inputs = stacked_inputs[:, -self.plm_embed_size:, :]
         stacked_inputs_ln = self.embed_ln(stacked_inputs)

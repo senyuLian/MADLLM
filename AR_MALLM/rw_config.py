@@ -7,7 +7,7 @@ def init_config_file():
 
     # configuration for env
     config['env_config'] = dict({'n_state': 130,
-                            'n_agent': 5}) 
+                            'n_agent': 5}) ##1
 
     # configuration for agentÅ
     config['agent_config'] = dict({'n_action': 16,
@@ -20,7 +20,7 @@ def init_config_file():
     config['RL_config'] = dict({'gamma': 0.9,
                            'batch_size': 1,
                            'buffer_size': 1,
-                           'max_seq_length': 90, #评估时间步
+                           'max_seq_length': 90, #评估时间步##8
                            'critic_lr': 0.0005,
                            'actor_lr': 0.00005,
                            'optim_alpha': 0.99,   # parameter for RMSProp
@@ -54,21 +54,21 @@ def init_config_file():
     #                             'gpu_process_up': 1})
 
 
-    config['AR_env_config'] = dict({'max_user_num': 5,  
+    config['AR_env_config'] = dict({'max_user_num': 5,  ##2
                                'gpu_num': 1,
-                               'user_arrive_time':[0, 10000, 20000, 30000, 40000],
+                               'user_arrive_time':[0, 10000, 20000, 30000, 40000],##3
                                'user_active_time': 50,  # unit: second
-                               'sys_active_time': 90,  # unit: second
+                               'sys_active_time': 90,  # unit: second ##4
                                'user_band_trace': 'fix',
-                               'fixed_band': [60000, 60000, 60000, 60000, 60000],  # unit: Kbps
+                               'fixed_band': [60000, 60000, 60000, 60000, 60000],  # unit: Kbps##5
                                'user_band_trace_path': 'user_band/',
                                'user_band_trace_group_id': 9,
                                'BS_alg': 'new_heur_inter',
                                'user_alg': 'rl_directed',  # rl_directed是使用COMA QoE-based是对比算法
-                               'penalty': 1.0,
+                               'penalty': 0.5,
                                'max_band': 100000,
                                'min_band': 5000,
-                               'init_actions': [1, 1, 1, 1, 1],
+                               'init_actions': [1, 1, 1, 1, 1],##6
                                'throughput':
                                 [[[25.6, 35.7, 51.9, 66.1, 73.7, 84.7, 91.2],
                                   [9.4, 9.4, 12.3, 14.7, 16.0, 16.8, 0]],
@@ -77,7 +77,7 @@ def init_config_file():
                                 'gpu_process_up': 1})
 
     config['Ex_config'] = dict({'max_episode_num': 5000,
-                           'version_id': 'mallm-90-0.5p',
+                           'version_id': 'mallm-90-0.5p-8rank-no_pre',##7
                            'test_model_id': 4990,
                            'random_seed': 0,
                            'test_num': 250,

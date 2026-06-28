@@ -86,7 +86,8 @@ class Env(object):
         # 将已超时的请求从直方图中取出
         if len(self.BaseStation.Histogram.query_bins) > 0:
             bin_ID_now = int(self.sys_time / self.BaseStation.Histogram.deltaT)
-            for i in range(0, bin_ID_now - 5):
+            cleanup_limit = max(0, min(bin_ID_now - 5, len(self.BaseStation.Histogram.query_bins)))
+            for i in range(cleanup_limit):
                 while len(self.BaseStation.Histogram.query_bins[i]) > 0:
                     query_temp = self.BaseStation.Histogram.query_bins[i].pop(0)
                     query_temp.end_flag = True

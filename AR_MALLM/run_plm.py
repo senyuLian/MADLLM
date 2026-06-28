@@ -12,6 +12,7 @@ sys.modules['transformers.generation_utils'] = sys.modules['transformers']  # �
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pprint import pprint
 from munch import Munch
+from torch import nn
 from torch.nn import CrossEntropyLoss
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
@@ -67,7 +68,27 @@ def load_model(args, model, model_dir):
         # load lora weights
         model.plm.load_adapter(model_dir, adapter_name='default')
         # load other modules except plm
-        model.modules_except_plm.load_state_dict(torch.load(os.path.join(model_dir, 'modules_except_plm.bin')))
+        ckpt_path = os.path.join(model_dir, 'modules_except_plm.bin')
+        state_dict = torch.load(ckpt_path, map_location='cpu')
+
+        # Some older checkpoints were trained with a different max_ep_len, which changes
+        # the size of the timestep embedding. Resize it to match the checkpoint before loading.
+        timestep_key = None
+        for key in state_dict.keys():
+            if key.endswith('weight') and key.split('.')[-2] == '3':
+                timestep_key = key
+                break
+        if timestep_key is not None:
+            ckpt_timestep_shape = state_dict[timestep_key].shape
+            if model.embed_timestep.weight.shape != ckpt_timestep_shape:
+                model.embed_timestep = nn.Embedding(ckpt_timestep_shape[0], model.plm_embed_size).to(model.device)
+                model.max_ep_len = ckpt_timestep_shape[0] - 1
+                for idx, module in enumerate(model.modules_except_plm):
+                    if isinstance(module, nn.Embedding):
+                        model.modules_except_plm[idx] = model.embed_timestep
+                        break
+
+        model.modules_except_plm.load_state_dict(state_dict)
     else:
         # lora is disabled, load whole model
         model.load_state_dict(torch.load(os.path.join(model_dir, 'model.bin')))
@@ -215,7 +236,8 @@ def run(args):
     plm_embed_size = cfg.plm_embed_sizes[args.plm_type][args.plm_size]
     max_ep_len = exp_dataset_info.max_timestep + 1 #config['AR_env_config']['user_active_time']-1
     rl_policy = OfflineRLPolicy(state_feature_dim=args.state_feature_dim, bitrate_levels=BITRATE_LEVELS, state_encoder=state_encoder, plm=plm, plm_embed_size=plm_embed_size, 
-                                           max_length=args.w, max_ep_len=max_ep_len, device=args.device, device_out=args.device_out, which_layer=args.which_layer)
+                                           max_length=args.w, max_ep_len=max_ep_len, device=args.device, device_out=args.device_out, which_layer=args.which_layer,
+                                           use_pre_r=bool(args.use_pre_r))
 
     # 4. handling directory and path
 
@@ -231,6 +253,7 @@ def run(args):
         f'_lr_{args.lr}_wd_{args.weight_decay}_warm_{args.warmup_steps}_epochs_{args.num_epochs}_seed_{args.seed}'
         f'_return_scale_{args.target_return_scale}'
         f'_penalty_{args.penalty}'
+        f'_use_pre_r_{int(args.use_pre_r)}'
     )  #
     checkpoint_dir = os.path.join(models_dir, f'early_stop_{args.which_layer}_checkpoint')
     best_model_dir = os.path.join(models_dir, f'early_stop_{args.which_layer}_best_model')
@@ -305,6 +328,7 @@ if __name__ == '__main__':
     parser.add_argument('--grad-accum-steps', type=int, default=cfg.grad_accum_steps)
     parser.add_argument('--seed', type=int, default=cfg.seed)
     parser.add_argument('--scale', type=int, default=cfg.scale)
+    parser.add_argument('--use-pre-r', type=int, default=cfg.use_pre_r, choices=[0, 1], help='是否在训练中引入 pre_rs 输入（1=使用，0=关闭）')
 
     parser.add_argument('--save-checkpoint-per-epoch', type=int, help='saving checkpoint per iteration')
     #parser.add_argument('--target-return-scale', type=float, help='target return, which specifies the expected performance for the model to achieve', default=1) ####
@@ -313,6 +337,8 @@ if __name__ == '__main__':
     parser.add_argument('--adapt', action="store_true", help='adapt model')
     parser.add_argument('--test', action="store_true", help='test model')
     parser.add_argument('--model-dir', help='model weight dir for testing')
+    parser.add_argument('--ablate-pre-r', action='store_true', help='replace pre_r with a constant during evaluation')
+    parser.add_argument('--pre-r-constant', type=float, default=0.0, help='constant value used when pre_r ablation is enabled')
     parser.add_argument('--device', action='store', dest='device', help='device (cuda or cpu) to run experiment')
     parser.add_argument('--device-out', action='store', dest='device_out', help='device (cuda or cpu) to place the split of model near the output')
     parser.add_argument('--device-mid', action='store', dest='device_mid', help='device (cuda or cpu) to place the split of model between the input and output')

@@ -22,9 +22,10 @@ class Config:
     scale = 1000          # 奖励缩放
     context_window = 20   # 即原代码中的 'w'
     state_feature_dim = 256
-    target_return_scale = 10000.0
-    penalty = 0       # 环境惩罚项系数
+    target_return_scale = 1000
+    penalty = 0.5       # 环境惩罚项系数
     sample_step = None       # 经验采样步长###
+    use_pre_r = 1            # 训练时是否引入 pre_rs 输入
 
     # plm special
     plm_types = ['gpt2', 'llama', 'llava', 't5-lm', 'opt', 'mistral']
